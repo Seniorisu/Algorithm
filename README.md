@@ -20,7 +20,7 @@ int rmq(int x,int y){
 	return max(st[x][k],st[y-(1<<k)+1][k]);
 }
 ```
-### 数组模拟邻接表
+### 数组模拟邻接表（链式前向星）
 [数组模拟邻接表](https://www.acwing.com/blog/content/4663/)
 链表的邻接表和图的邻接表均使用头插法。
 - 边结点
@@ -78,17 +78,63 @@ void join(int x,int y){
 	}
 }
 ```
-[带权并查集]()
+
+[带权并查集](https://blog.csdn.net/yjr3426619/article/details/82315133)
+- 边的值永远是与父节点的关系
+- find函数（将父节点修改为代表元，更新边权值，返回父节点）
+```c++
+//sum[i]表示i节点+sum[i]=父节点
+int find(int x){
+	if(x!=fa[x]){
+		int temp=fa[x];
+		fa[x]=find(temp);
+		sum[x]+=sum[temp];
+	}
+	return fa[x];
+}
+```
+- join函数（find之后，x和y直接连接fx和fy）
+```c++
+void join(int x,int y,ll s){
+	int fx=find(x),fy=find(y);
+
+	if(fx!=fy){
+		fa[fx]=fy;
+		sum[fx]=sum[y]+s-sum[x];
+	}
+}
+```
+
+[种类并查集]()
 
 ### 线段树
 [线段树](https://blog.csdn.net/weixin_45697774/article/details/104274713)
 [线段树-区间更新](https://blog.csdn.net/weq2011/article/details/128791426)
+[扫描线](https://blog.csdn.net/Zz_0913/article/details/135128515)
 - 线段树节点
 ```c++
 struct Tree{
 	int l,r;
 	int sum;
 };
+```
+- push_up函数
+```c++
+void push_up(int id){
+    tree[id].sum=tree[id*2].sum+tree[id*2+1].sum;
+}
+```
+- push_dowm函数
+```c++
+void push_dowm(int id){
+    if(tree[id].lazy){
+        tree[id*2].lazy+=tree[id].lazy;
+        tree[id*2+1].lazy+=tree[id].lazy;
+        tree[id*2].sum+=tree[id].lazy*(区间长度);
+        tree[id*2+1].sum+=tree[id].lazy*(区间长度);
+        tree[id].lazy=0;
+    }
+}
 ```
 - build函数建树
 ```c++
@@ -106,10 +152,18 @@ void build(int id,int l,int r){
 ```
 - 区间查询find
 ```c++
+//无push_down
 int find(int id,int l,int r){
 	if(tree[id].l>=l && tree[id].r<=r)return tree[id].sum;
 	else if(tree[id].l>r || tree[id].r<l)return 0;
 	else return find(id*2,l,r)+find(id*2+1,l,r);
+}
+//有push_down
+int find(int id,int l,int r){
+	if(tree[id].l>=l && tree[id].r<=r)return tree[id].sum;
+	else if(tree[id].l>r || tree[id].r<l)return 0;
+	push_down(id);
+	return find(id*2,l,r)+find(id*2+1,l,r);
 }
 ```
 - 单点修改add
@@ -122,6 +176,22 @@ void add(int id,int dis,int change){
 	if(dis<=tree[id*2].r)add(id*2,dis,change);
 	else add(id*2+1,dis,change);
 	tree[id].sum=tree[id*2].sum+tree[id*2+1].sum;
+}
+```
+- 区间修改change
+```c++
+void change(int id,int l,int r,int v){
+    if(tree[id].l>r || tree[id].r<l)return;
+    if(tree[id].l>=l && tree[id].r<=r){
+        tree[id].lazy+=v;
+        tree[id].sum+=v*(区间长度);;
+        return;
+    }
+    push_dowm(id);
+    int mid=(tree[id].l+tree[id].r)>>1;
+    if(l <= mid)change(id*2,l,r,v);
+    if(r > mid)change(id*2+1,l,r,v);
+    push_up(id);
 }
 ```
 
@@ -165,6 +235,50 @@ int run_year[12]={31,29,31,30,31,30,31,31,30,31,30,31};
 if((year%400==0)||(year%4==0&&year%100!=0))
 ```
 ***
+### 埃氏筛法
+[埃氏筛法](https://blog.csdn.net/holly_Z_P_F/article/details/85063174)
+```c++
+void sieve(){
+    for(int i=2;i<N;i++){
+        if(!isprime[i]){
+            prime[sum++]=i;
+            for(int j=2*i;j<N;j+=i)isprime[j]=true;
+        }
+    }
+}
+```
+***
+### 排序
+[归并排序]()
+- mergeSort函数
+```c++
+void mergeSort(int *arr,int left,int right){
+    if(left>=right)return;
+
+    int mid=(left+right)>>1;
+    mergeSort(arr,left,mid);
+    mergeSort(arr,mid+1,right);
+    merge(arr,left,mid,right);
+}
+```
+- merge函数
+```c++
+//count_是全局变量，用于统计逆序对
+void merge(int *arr,int left,int mid, int right){
+    int temp[N];
+    int s1=left,s2=mid+1,now=0;
+
+    while(s1<=mid && s2<=right){
+        if(arr[s1]<=arr[s2])temp[now++]=arr[s1++];
+        else temp[now++]=arr[s2++],count_+=(mid-s1+1);
+    }
+
+    while(s1<=mid)temp[now++]=arr[s1++];
+    while(s2<=right)temp[now++]=arr[s2++];
+
+    for(int i=0;i<now;i++)arr[left+i]=temp[i];
+}
+```
 ### 前缀和、差分
 [前缀和与差分](https://blog.csdn.net/weixin_45629285/article/details/111146240)
 - 二维差分函数insert
@@ -204,10 +318,9 @@ long long fast_power(long long base,long long power){
 [矩阵快速幂](https://blog.csdn.net/gwk1234567/article/details/106444071)
 斐波那契数列
 ***
-
 ## 双指针算法
 ### 滑动窗口
-
+***
 ## 最近公共祖先(LCA)
 [LCA](https://www.luogu.com.cn/problem/solution/P3379)
 ### 树上倍增
@@ -257,7 +370,7 @@ int LCA(int x,int y){
 	return fa[x][0];
 }
 ```
-
+***
 ## 动态规划
 ### 树形DP
 [树形DP、换根DP](https://blog.csdn.net/write_1m_lines/article/details/126263935)
@@ -278,11 +391,41 @@ void dfs(int now,int fath){
     }
 }
 ```
-
+***
 ## 字符串
 ### KMP算法
 [KMP模式匹配算法](https://blog.csdn.net/m0_58386652/article/details/144316661)
-
+***
 ## 图论
 ### 最小生成树
-#### prime算法
+[最小生成树](https://blog.csdn.net/qq_43619271/article/details/109091314)
+- prime算法 O(n^2^)
+```c++
+int prime(int pos){
+    ll sum=0;
+
+    dist[pos]=0;
+
+    for(int i=1;i<=2021;i++){
+        int cur=-1;
+        for(int j=1;j<=2021;j++){
+            if(!vis[j] && (cur==-1 || dist[j] < dist[cur])) cur=j;
+        }
+
+        sum+=dist[cur],vis[cur]=true;
+
+        for(int j=1;j<=2021;j++){
+            if(!vis[j]) dist[j]=min(map[cur][j],dist[j]);
+        }
+    }
+    return sum;
+}
+```
+- kruskal算法
+***
+### 最短路算法
+[最短路](https://blog.csdn.net/weixin_44267007/article/details/119770562)
+***
+### 连通块
+***
+### DFS序、欧拉序和笛卡尔树
